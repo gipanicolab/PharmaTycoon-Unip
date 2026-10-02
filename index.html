@@ -1,0 +1,1601 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pharma Tycoon</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1321;--panel:#1e293b;--line:#344155;--blue:#30bcef;--muted:#9aa9bc}
+*{box-sizing:border-box}
+body{margin:0;background:#080e18;color:#f3f6fc;font:14px Arial,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:#202c3e;color:inherit;border-radius:6px;padding:9px 13px}
+button:hover{filter:brightness(1.2)}
+button:disabled{opacity:.45;cursor:default}
+.primary{background:var(--blue);color:#052238;font-weight:bold;border:0}
+.green{background:#45dd82;color:#083b21;font-weight:bold}
+.gold{color:#facc15}
+#game{max-width:1200px;height:min(760px,100dvh);min-height:500px;margin:auto;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--line)}
+header{display:flex;gap:9px;align-items:center;flex-wrap:wrap;background:#131e31;border-bottom:1px solid var(--line);padding:13px}
+.stat{background:#1c293b;border:1px solid #2c3b50;border-radius:6px;padding:6px 9px;font-weight:bold;white-space:nowrap}
+.money{color:#52dc8a}
+.controls{margin-left:auto;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.controls button{padding:5px 9px}
+.active{background:#143349;color:#46c8ff!important}
+main{position:relative;flex:1;min-height:0;overflow:auto}
+#campus{width:100%;height:100%;display:block;touch-action:manipulation}
+#panel{padding:20px;display:none;min-height:100%}
+h2{font-size:22px;margin:0 0 18px;border-bottom:1px solid var(--line);padding-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+h2 button{font-size:13px;font-weight:normal}
+h3{margin:0 0 10px;font-size:16px}
+p{color:var(--muted);line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.card{padding:17px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.card p{margin:8px 0;font-size:13px}
+.card button{margin-top:8px}
+.wide{width:100%}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.badge{font-size:11px;border:1px solid currentColor;border-radius:12px;padding:3px 8px;color:#facc15}
+.track{height:8px;background:#10192b;border-radius:8px;overflow:hidden;margin:14px 0 9px}
+.track i{display:block;height:100%;background:#32bcee}
+.small{font-size:12px;color:var(--muted)}
+nav{display:flex;overflow-x:auto;border-top:1px solid var(--line);background:#131e31}
+nav button{flex:1;min-width:70px;border:0;border-radius:0;padding:13px 4px;font-size:12px;color:#9eacbf}
+nav span{display:block;font-size:23px;margin-bottom:4px}
+.legend{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
+.legend span{border:1px solid var(--line);border-radius:12px;padding:3px 8px;font-size:11px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.hint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:#101c30d9;padding:9px 17px;border-radius:22px;font-size:12px;color:#b1b9c9;pointer-events:none;white-space:nowrap}
+#toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9;background:#1c4050;border:1px solid #32bcee;border-radius:8px;padding:12px 18px;display:none;max-width:90vw}
+dialog{background:#101c2e;color:#f3f6fc;border:1px solid #40516b;border-radius:12px;width:500px;max-width:94vw;padding:25px}
+dialog::backdrop{background:#0009}
+dialog button{margin:5px}
+.form{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+input,select{background:#101a2c;color:#fff;border:1px solid #40516b;border-radius:6px;padding:9px;max-width:100%}
+svg{width:100%;height:180px}
+.event{border-left:3px solid #facc15;margin:10px 0}
+@media(max-width:650px){
+  #game{height:100dvh;min-height:0}
+  header{padding:8px;gap:5px}
+  .stat{font-size:11px;padding:5px}
+  .controls{margin-left:0}
+  .grid{grid-template-columns:1fr}
+  #panel{padding:12px}
+  nav button{font-size:10px}
+  nav span{font-size:18px}
+  h2{font-size:18px}
+  .hint{font-size:10px;white-space:normal;width:85%;text-align:center}
+}
+</style>
+</head>
+<body>
+<div id="game">
+  <header>
+    <span class="stat">🏢 PharmaCorp</span>
+    <span class="stat money" id="cash"></span>
+    <span class="stat money" id="profit"></span>
+    <span class="stat" id="date"></span>
+    <span class="stat gold" id="rep"></span>
+    <div class="controls">
+      <button id="pause" onclick="togglePause()">⏸</button>
+      <button onclick="setSpeed(1)" id="s1">1x</button>
+      <button onclick="setSpeed(2)" id="s2">2x</button>
+      <button onclick="setSpeed(3)" id="s3">3x</button>
+      <button onclick="advanceMonth()">+1 mês</button>
+      <button onclick="showColors()">🎨 Cores</button>
+      <button onclick="menu()">⚙ Menu</button>
+    </div>
+  </header>
+  <main>
+    <canvas id="campus" aria-label="Campus da empresa"></canvas>
+    <section id="panel"></section>
+    <div class="hint" id="hint">
+      👆 Toque nas instalações ou nos funcionários para gerenciar
+    </div>
+  </main>
+  <nav id="nav"></nav>
+</div>
+<div id="toast" role="status"></div>
+<dialog id="modal"></dialog>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const money = n => '$' + Math.round(n).toLocaleString('pt-BR');
+
+const roles = [
+  ['Pesquisador','#3984ff',3200,'Laboratório de Pesquisa','Ciência fictícia'],
+  ['Produção','#64c637',2600,'Fábrica de Medicamentos','Operação de máquinas'],
+  ['Engenheiro','#a855f7',3100,'Fábrica de Medicamentos','Manutenção'],
+  ['Controle de Qualidade','#f97316',2800,'Área de Testes Fictícios','Inspeção'],
+  ['Administrador','#facc15',3000,'Escritório Administrativo','Gestão financeira'],
+  ['Vendas/Mkt','#ef4444',2700,'Área Comercial e Marketing','Mercado'],
+  ['Diretor','#ffffff',4200,'Escritório Administrativo','Liderança']
+];
+
+const buildings = [
+  ['Laboratório de Pesquisa','#24479d',125,115,190,150],
+  ['Fábrica de Medicamentos','#175d39',365,115,200,150],
+  ['Armazém Logístico','#864019',615,115,180,150],
+  ['Escritório Administrativo','#79501d',125,315,180,150],
+  ['Área de Testes Fictícios','#61318b',340,325,165,140],
+  ['Área de Logística','#176383',545,325,165,140],
+  ['Área Comercial e Marketing','#912934',745,315,160,150]
+];
+
+const meds = [
+  ['💊','Sonepil','Relaxamento e sono sereno fictício',45,60,100,1],
+  ['🧪','Calmatrix','Equilíbrio e foco fictício',65,75,180,1],
+  ['✨','BioVitalis','Vitalidade celular fictícia',85,90,280,1],
+  ['🧠','NeuroZen','Clareza mental fictícia',130,110,450,2],
+  ['🌿','ImunoLume','Bem-estar imaginário',170,130,650,2],
+  ['💎','VitaNova','Tecnologia avançada fictícia',220,150,900,3]
+];
+
+const objectives = [
+  ['Contratar um funcionário',s=>s.hired>=1,4000],
+  ['Concluir a primeira pesquisa',s=>s.products.some(p=>p.unlocked),6000],
+  ['Produzir 60 unidades',s=>s.totalMade>=60,5000],
+  ['Melhorar uma instalação',s=>s.levels.some(l=>l>1),5000],
+  ['Obter um mês lucrativo',s=>s.history.some(h=>h.profit>0),7000],
+  ['Desbloquear três produtos',s=>s.products.filter(p=>p.unlocked).length>=3,12000],
+  ['Formar uma equipe de oito pessoas',s=>s.staff.length>=8,15000]
+];
+
+function fresh(easy=false) {
+  return {
+    version:2,
+    easy,
+    cash:easy?95000:70000,
+    day:1,month:1,year:1,rep:52,speed:1,paused:false,
+    levels:[1,1,1,1,1,1,1],
+    staff:[
+      {name:'Dra. Beatriz Santos',role:0,exp:78,eff:85,sat:92},
+      {name:'Carlos Oliveira',role:1,exp:70,eff:80,sat:88},
+      {name:'Mariana Duarte',role:4,exp:72,eff:82,sat:94}
+    ],
+    products:meds.map((m,i)=>({
+      progress:i===0?m[5]:0,
+      unlocked:i===0,
+      stock:i===0?8:0,
+      enabled:i===0,
+      price:m[3]
+    })),
+    research:null,
+    raw:150,totalMade:0,hired:0,
+    claimed:[],history:[],events:[],pending:null,
+    income:0,costs:0,lastProfit:250,marketBoost:1,
+    marketingDays:0,marketingBoost:1,
+    contracts:[],
+    contractOffers:[
+      {id:1,name:'Distribuidora Aurora',product:0,quantity:20,reward:1200,days:60},
+      {id:2,name:'Rede Horizonte',product:1,quantity:30,reward:2500,days:90}
+    ],
+    competitors:[
+      {name:'NovaPharm',share:35,tech:1},
+      {name:'BioSphere',share:25,tech:1}
+    ],
+    losses:0
+  };
+}
+
+let update,research,production,capacity,daily,advanceMonth;
+let state=fresh();
+let view='Campus',frame=0,accumulator=0,last=performance.now(),autosave=0;
+
+const tabs=[
+  ['🗺️','Campus'],['🧪','Pesquisa'],['🏭','Produção'],
+  ['👥','Equipe'],['📈','Mercado'],['💰','Finanças'],
+  ['🎯','Objetivos'],['📣','Marketing'],['🤝','Contratos']
+];
+
+function toast(text) {
+  $('toast').textContent=text;
+  $('toast').style.display='block';
+  clearTimeout(toast.timer);
+  toast.timer=setTimeout(()=>$('toast').style.display='none',3500);
+}
+
+function header() {
+  $('cash').textContent='💵 '+money(state.cash);
+  $('profit').textContent=(state.lastProfit>=0?'+':'')+
+    money(state.lastProfit)+'/mês';
+  $('date').textContent=
+    `📅 Dia ${state.day}, Mês ${state.month} (Ano ${state.year})`;
+  $('rep').textContent='⭐ '+Math.round(state.rep)+'%';
+  $('pause').textContent=state.paused?'▶':'⏸';
+  [1,2,3].forEach(i=>
+    $('s'+i).classList.toggle('active',state.speed===i)
+  );
+}
+
+function setSpeed(n) {
+  state.speed=n;
+  state.paused=false;
+  header();
+}
+
+function togglePause() {
+  state.paused=!state.paused;
+  header();
+}
+
+function showDialog(html) {
+  $('modal').innerHTML=html+
+    '<p><button onclick="document.getElementById(\'modal\').close()">Fechar</button></p>';
+  $('modal').showModal();
+}
+
+function legend() {
+  return roles.map(r=>
+    `<span><i class="dot" style="background:${r[1]}"></i>${r[0]}</span>`
+  ).join('');
+}
+
+function showColors() {
+  showDialog(
+    '<h2>🎨 Uniformes da equipe</h2><div class="legend">'+
+    legend()+'</div><p>Clique em um funcionário no campus para ver suas informações.</p>'
+  );
+}
+
+function openView(name) {
+  view=name;
+  const campus=name==='Campus';
+  $('campus').style.display=campus?'block':'none';
+  $('hint').style.display=campus?'block':'none';
+  $('panel').style.display=campus?'none':'block';
+
+  document.querySelectorAll('[data-tab]').forEach(b=>
+    b.classList.toggle('active',b.dataset.tab===name)
+  );
+
+  if(!campus)renderPanel();
+  header();
+}
+
+function title(text) {
+  return `<h2>${text}
+    <button onclick="openView('Campus')">✕ Fechar</button>
+  </h2>`;
+}
+
+function renderPanel() {
+  let html='';
+
+  if(view==='Marketing')html=marketingPanel();
+  if(view==='Contratos')html=contractsPanel();
+
+  if(view==='Pesquisa') {
+    html=title('🧪 Árvore de Pesquisa Farmacêutica')+
+      '<p>Ideia → Pesquisa → Desenvolvimento → Testes fictícios → Aprovação → Produção. '+
+      'Todos os produtos são imaginários.</p><div class="grid">'+
+      meds.map((m,i)=>{
+        const p=state.products[i];
+        const locked=m[6]>1&&
+          state.products.filter(p=>p.unlocked).length<(m[6]-1)*2;
+
+        return `<div class="card">
+          <div class="row">
+            <h3>${m[0]} ${m[1]}</h3>
+            <span class="badge">${
+              p.unlocked?'APROVADO':
+              state.research===i?'PESQUISANDO…':'TIER '+m[6]
+            }</span>
+          </div>
+          <p>${m[2]}</p>
+          <p>Preço médio: <b>${money(m[3])}</b> |
+            Demanda: <b>${m[4]}/mês</b></p>
+          <div class="track">
+            <i style="width:${p.progress/m[5]*100}%"></i>
+          </div>
+          <div class="small">
+            Progresso: ${Math.floor(p.progress)} / ${m[5]} pts
+          </div>
+          <button class="wide primary"
+            ${p.unlocked||locked||state.research===i?'disabled':''}
+            onclick="research(${i})">${
+              p.unlocked?'Disponível para produção':
+              locked?'Conclua pesquisas anteriores':
+              state.research===i?'Em andamento':
+              'Pesquisar · '+money(m[5]*6)
+            }</button>
+        </div>`;
+      }).join('')+'</div>';
+  }
+
+  if(view==='Equipe') {
+    html=title('👥 Gestão de Funcionários')+
+      '<div class="legend">'+legend()+'</div>'+
+      '<div class="row"><h3>Equipe: '+state.staff.length+
+      ' funcionários</h3>'+
+      '<button class="green" onclick="hireMenu()">✚ Contratar especialistas</button>'+
+      '</div><br><div class="grid">'+
+      state.staff.map((p,i)=>`
+        <div class="card">
+          <div class="row">
+            <h3><i class="dot" style="background:${roles[p.role][1]}"></i>${p.name}</h3>
+            <span class="badge" style="color:${roles[p.role][1]}">
+              ${roles[p.role][0]}
+            </span>
+          </div>
+          <p>Especialidade: ${roles[p.role][4]}<br>
+            Salário: ${money(roles[p.role][2])}/mês<br>
+            Local: ${roles[p.role][3]}</p>
+          <p>Experiência: <b>${p.exp}%</b> ·
+            Eficiência: <b class="money">${p.eff}%</b> ·
+            Satisfação: <b class="gold">${p.sat}%</b></p>
+          <button class="wide" onclick="staffInfo(${i})">
+            🔍 Gerenciar funcionário
+          </button>
+        </div>`
+      ).join('')+'</div>';
+  }
+
+  if(view==='Mercado') {
+    html=title('📈 Mercado e Concorrentes')+
+      '<p>As vendas são diárias. Preços maiores podem reduzir a demanda.</p>'+
+      '<div class="grid">'+
+      meds.map((m,i)=>!state.products[i].unlocked?'':`
+        <div class="card">
+          <h3>${m[0]} ${m[1]}</h3>
+          <p>Demanda estimada: ${Math.round(demandPerMonth(i))}/mês ·
+            Estoque: ${state.products[i].stock}</p>
+          <div class="form">
+            <label>Preço
+              <input type="number" min="1" max="999"
+                id="price${i}" value="${state.products[i].price}">
+            </label>
+            <button onclick="price(${i})">Atualizar</button>
+          </div>
+        </div>`
+      ).join('')+
+      '</div><h3 style="margin-top:20px">Empresas concorrentes</h3>'+
+      '<div class="grid">'+
+      state.competitors.map(c=>`
+        <div class="card">
+          <h3>${c.name}</h3>
+          <p>Participação estimada: ${c.share}% · Tecnologia: nível ${c.tech}</p>
+        </div>`
+      ).join('')+'</div>';
+  }
+
+  if(view==='Finanças') {
+    const salary=state.staff.reduce((n,p)=>n+roles[p.role][2],0);
+    html=title('💰 Finanças da Empresa')+
+      `<div class="grid">
+        <div class="card">
+          <h3>Resultados do mês atual</h3>
+          <p>Receita: <b class="money">${money(state.income)}</b></p>
+          <p>Incentivo inicial: até ${money(state.easy?8000:10700)}/mês,
+            aplicado no fechamento.</p>
+          <p>Despesas acumuladas: ${money(state.costs)}</p>
+          <p>Salários previstos: ${money(salary)} ·
+            Manutenção: ${money(700*state.levels.reduce((a,b)=>a+b,0))}</p>
+          <p>Lucro do último mês: ${money(state.lastProfit)}</p>
+          <p>Valor estimado da empresa: ${
+            money(state.cash+
+              state.levels.reduce((a,b)=>a+b,0)*8000+
+              state.products.filter(p=>p.unlocked).length*15000)
+          }</p>
+        </div>
+        <div class="card"><h3>Lucro mensal</h3>${chart()}</div>
+      </div>
+      <h3 style="margin-top:20px">Eventos e comunicados</h3>`+
+      state.events.slice(-8).reverse().map(e=>`
+        <div class="card event"><b>${e.title}</b><p>${e.text}</p></div>`
+      ).join('')+
+      (state.pending?
+        '<button class="primary" onclick="eventDialog()">Resolver evento pendente</button>':
+        '');
+  }
+
+  if(view==='Objetivos') {
+    html=title('🎯 Crescimento da Empresa')+
+      '<p>Receba recompensas por suas conquistas.</p><div class="grid">'+
+      objectives.map((o,i)=>`
+        <div class="card">
+          <h3>${o[0]}</h3>
+          <p>Recompensa: <b class="money">${money(o[2])}</b></p>
+          <button class="wide primary"
+            ${state.claimed.includes(i)||!o[1](state)?'disabled':''}
+            onclick="claim(${i})">${
+              state.claimed.includes(i)?'✓ Recompensa recebida':
+              o[1](state)?'Receber recompensa':'Em progresso'
+            }</button>
+        </div>`
+      ).join('')+'</div>';
+  }
+
+  $('panel').innerHTML=html;
+}
+
+function pay(n) {
+  if(state.cash<n) {
+    toast('Dinheiro insuficiente. Confira os objetivos.');
+    return false;
+  }
+  state.cash-=n;
+  state.costs+=n;
+  return true;
+}
+
+function buyRaw() {
+  if(pay(1200)) {
+    state.raw+=100;
+    update();
+    toast('100 unidades recebidas');
+  }
+}
+
+function price(i) {
+  const n=Number($('price'+i).value);
+  if(!Number.isFinite(n)||n<1||n>999) {
+    toast('Use um preço entre 1 e 999');
+    return;
+  }
+  state.products[i].price=n;
+  toast('Preço atualizado');
+  update();
+}
+
+function claim(i) {
+  if(!state.claimed.includes(i)&&objectives[i][1](state)) {
+    state.claimed.push(i);
+    state.cash+=objectives[i][2];
+    toast('Objetivo concluído! '+money(objectives[i][2]));
+    update();
+  }
+}
+
+function storage() {
+  return state.levels[2]*250;
+}
+
+function hireMenu() {
+  showDialog(
+    '<h2>✚ Contratar especialista</h2>'+
+    '<p>Taxa de contratação: $1.000. Salários pagos ao fim do mês.</p>'+
+    roles.map((r,i)=>`
+      <div class="row" style="margin:8px 0">
+        <span style="color:${r[1]}">${r[0]} · ${money(r[2])}/mês</span>
+        <button onclick="hire(${i})">Contratar</button>
+      </div>`
+    ).join('')
+  );
+}
+
+function hire(i) {
+  if(pay(1000)) {
+    const names=[
+      'Ana Martins','Lucas Silva','Julia Costa','Pedro Lima',
+      'Fernanda Alves','Rafael Rocha','Camila Reis','Bruno Souza'
+    ];
+
+    state.staff.push({
+      name:names[state.hired%names.length]+
+        (state.hired>=8?' '+(state.hired+1):''),
+      role:i,exp:60,eff:state.easy?90:80,sat:90
+    });
+
+    state.hired++;
+    $('modal').close();
+    toast('Novo integrante contratado');
+    update();
+  }
+}
+
+function staffInfo(i) {
+  const p=state.staff[i];
+  showDialog(`
+    <h2>${p.name}</h2>
+    <p>Função: ${roles[p.role][0]}<br>
+      Local: ${roles[p.role][3]}<br>
+      Experiência: ${p.exp}%<br>
+      Eficiência: ${p.eff}%<br>
+      Satisfação: ${p.sat}%<br>
+      Salário: ${money(roles[p.role][2])}/mês</p>
+    <button class="primary" onclick="train(${i})"
+      ${p.eff>=100?'disabled':''}>Treinar · $800</button>
+    <button onclick="reward(${i})">Dar bônus · $400</button>
+  `);
+}
+
+function train(i) {
+  if(pay(800)) {
+    state.staff[i].eff=Math.min(100,state.staff[i].eff+5);
+    state.staff[i].exp=Math.min(100,state.staff[i].exp+5);
+    $('modal').close();
+    update();
+    toast('Treinamento concluído');
+  }
+}
+
+function reward(i) {
+  if(pay(400)) {
+    state.staff[i].sat=Math.min(100,state.staff[i].sat+10);
+    $('modal').close();
+    update();
+    toast('Bônus concedido');
+  }
+}
+
+function buildingInfo(i) {
+  const descriptions=[
+    'Aumenta os pontos de pesquisa diários.',
+    'Aumenta a capacidade de produção diária.',
+    'Aumenta a capacidade de estoque.',
+    'Reduz despesas administrativas.',
+    'Área de testes e controle fictícios.',
+    'Reduz o custo operacional da produção.',
+    'Amplia a demanda dos produtos.'
+  ];
+
+  const destinations=[
+    'Pesquisa','Produção','Produção','Finanças',
+    'Pesquisa','Produção','Mercado'
+  ];
+
+  showDialog(`
+    <h2>${buildings[i][0]}</h2>
+    <p>Nível ${state.levels[i]} ·
+      Próxima melhoria: ${money(state.levels[i]*5000)}</p>
+    <p>${descriptions[i]}</p>
+    <button class="primary" onclick="upgrade(${i})">Melhorar instalação</button>
+    <button onclick="document.getElementById('modal').close();
+      openView('${destinations[i]}')">Gerenciar</button>
+  `);
+}
+
+function upgrade(i) {
+  if(pay(state.levels[i]*5000)) {
+    state.levels[i]++;
+    $('modal').close();
+    update();
+    toast('Instalação melhorada!');
+  }
+}
+
+function chart() {
+  const a=state.history.slice(-12);
+  if(!a.length)return '<p>O gráfico aparece após o primeiro mês.</p>';
+
+  const max=Math.max(1,...a.map(h=>Math.abs(h.profit)));
+  const points=a.map((h,i)=>
+    `${30+i*300/Math.max(1,a.length-1)},${90-h.profit/max*65}`
+  ).join(' ');
+
+  return `<svg viewBox="0 0 360 180" role="img" aria-label="Lucro por mês">
+    <path d="M30 90H340" stroke="#526078"/>
+    <polyline points="${points}" fill="none" stroke="#31bdee" stroke-width="3"/>
+    ${a.map((h,i)=>`
+      <circle cx="${30+i*300/Math.max(1,a.length-1)}"
+        cy="${90-h.profit/max*65}" r="4" fill="#52dc8a">
+        <title>Mês ${h.month}: ${money(h.profit)}</title>
+      </circle>`
+    ).join('')}
+    <text x="30" y="172" fill="#9aa9bc">Últimos ${a.length} meses</text>
+  </svg>`;
+}
+
+function monthEnd() {
+  const salaries=state.staff.reduce((n,p)=>n+roles[p.role][2],0);
+  const maintenance=state.levels.reduce((a,b)=>a+b,0)*700;
+  const expense=(salaries+maintenance)*(state.easy?.65:.85)/
+    (1+(state.levels[3]-1)*.08);
+
+  const credit=Math.min(expense,state.easy?8000:10700);
+  state.cash+=credit;
+  state.income+=credit;
+  state.cash-=expense;
+  state.costs+=expense;
+
+  state.lastProfit=state.income-state.costs;
+  state.history.push({month:state.month,profit:state.lastProfit});
+  if(state.history.length>36)state.history.shift();
+
+  state.losses=state.lastProfit<0?state.losses+1:0;
+  state.costs=0;
+  state.income=0;
+  state.day=1;
+  state.month++;
+
+  if(state.month>12) {
+    state.month=1;
+    state.year++;
+  }
+
+  state.marketBoost=1;
+
+  state.competitors.forEach(c=>{
+    c.share=Math.max(10,Math.min(45,
+      c.share+Math.round(Math.random()*6-3)
+    ));
+    if(Math.random()<.2)c.tech++;
+  });
+
+  if(state.cash<15000||state.losses>=2) {
+    state.cash+=18000;
+    state.events.push({
+      title:'Contrato de recuperação',
+      text:'Um parceiro fictício concedeu $18.000 para apoiar o crescimento.'
+    });
+    toast('Contrato de recuperação: +$18.000');
+    state.losses=0;
+  }else{
+    toast('Mês encerrado · Resultado: '+money(state.lastProfit));
+  }
+
+  save(true);
+}
+
+function randomEvent() {
+  const events=[
+    {
+      title:'Aumento da demanda',
+      text:'Uma feira atraiu clientes. Você pode investir em divulgação.',
+      cost:1500,bonus:1.5
+    },
+    {
+      title:'Manutenção preventiva',
+      text:'Uma máquina precisa de revisão. Você pode investir na manutenção.',
+      cost:1200,bonus:1.15
+    },
+    {
+      title:'Oportunidade de parceria',
+      text:'Uma distribuidora oferece uma campanha conjunta.',
+      cost:2000,bonus:1.6
+    }
+  ];
+
+  state.pending=events[Math.floor(Math.random()*events.length)];
+  state.events.push({
+    title:state.pending.title,text:state.pending.text
+  });
+}
+
+function eventDialog() {
+  if(!state.pending) {
+    showDialog('<h2>Eventos</h2><p>Nenhuma decisão pendente.</p>');
+    return;
+  }
+
+  const e=state.pending;
+  showDialog(`
+    <h2>${e.title}</h2><p>${e.text}</p>
+    <button class="primary" onclick="resolveEvent(true)">
+      Investir · ${money(e.cost)}
+    </button>
+    <button onclick="resolveEvent(false)">Continuar sem investimento</button>
+  `);
+}
+
+let resolveEvent;
+
+function save(silent=false) {
+  try {
+    localStorage.setItem('pharma-tycoon-independent-v1',JSON.stringify(state));
+    if(!silent)toast('Partida salva neste navegador');
+  }catch(e) {
+    if(!silent)toast('Não foi possível salvar. Exporte a partida pelo menu.');
+  }
+}
+
+function valid(s) {
+  return s&&(s.version===1||s.version===2)&&
+    Number.isFinite(s.cash)&&
+    Array.isArray(s.staff)&&s.staff.every(p=>
+      Number.isInteger(p.role)&&p.role>=0&&p.role<7&&
+      typeof p.name==='string'&&!/[<>]/.test(p.name)&&Number.isFinite(p.eff)
+    )&&
+    Array.isArray(s.products)&&s.products.length===6&&
+    s.products.every(p=>
+      Number.isFinite(p.stock)&&Number.isFinite(p.progress)&&Number.isFinite(p.price)
+    )&&
+    Array.isArray(s.levels)&&s.levels.length===7&&
+    s.levels.every(n=>Number.isInteger(n)&&n>0)&&
+    Array.isArray(s.history)&&Array.isArray(s.events)&&
+    Array.isArray(s.claimed)&&Array.isArray(s.competitors)&&
+    [s.day,s.month,s.year,s.raw,s.income,s.costs,s.rep,s.speed].every(Number.isFinite);
+}
+
+function migrate(s) {
+  s.version=2;
+  s.marketingDays??=0;
+  s.marketingBoost??=1;
+  s.contracts??=[];
+  s.contractOffers??=fresh().contractOffers;
+  return s;
+}
+
+function load() {
+  try {
+    const s=JSON.parse(localStorage.getItem('pharma-tycoon-independent-v1'));
+    if(!valid(s))throw Error();
+    state=migrate(s);
+    accumulator=0;
+    $('modal').close();
+    openView('Campus');
+    toast('Partida carregada');
+  }catch(e) {
+    toast('Nenhuma partida válida salva neste navegador');
+  }
+}
+
+function reset(easy) {
+  if(confirm('Começar uma nova campanha? A partida salva será substituída.')) {
+    state=fresh(easy);
+    accumulator=0;
+    save(true);
+    $('modal').close();
+    openView('Campus');
+  }
+}
+
+function exportSave() {
+  const blob=new Blob([JSON.stringify(state)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='pharma-tycoon-save.json';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+function importSave(input) {
+  const f=input.files[0];
+  if(!f)return;
+
+  f.text().then(text=>{
+    try {
+      const s=JSON.parse(text);
+      if(!valid(s))throw Error();
+      state=migrate(s);
+      accumulator=0;
+      save(true);
+      $('modal').close();
+      openView('Campus');
+      toast('Partida importada');
+    }catch(e) {
+      toast('Arquivo de partida inválido');
+    }
+  });
+}
+
+function menu() {
+  showDialog(
+    '<h2>⚙ Pharma Tycoon</h2>'+
+    '<p>Todos os medicamentos são fictícios. Um dia dura 2 segundos em 1x.</p>'+
+    '<button class="primary" onclick="save()">💾 Salvar</button>'+
+    '<button onclick="load()">📂 Carregar</button>'+
+    '<button onclick="exportSave()">Exportar partida</button>'+
+    '<label class="small">Importar JSON '+
+    '<input type="file" accept=".json" onchange="importSave(this)"></label><br>'+
+    '<button onclick="reset(false)">Novo jogo</button>'+
+    '<button onclick="reset(true)">Novo jogo · Modo Fácil</button>'+
+    '<button onclick="document.getElementById(\'modal\').close();eventDialog()">Eventos</button>'+
+    '<p>Sonepil começa aprovado e produzindo um lote de 60 unidades. '+
+    'Pesquise outros produtos manualmente. Confira os objetivos e contratos.</p>'
+  );
+}
+
+function marketingPanel() {
+  const campaigns=[
+    [1000,1.25,'Divulgação local'],
+    [2500,1.6,'Campanha regional'],
+    [4500,2,'Campanha nacional']
+  ];
+
+  return title('📣 Investimento em Marketing')+
+    `<p>Uma campanha por vez. As campanhas aumentam a demanda.</p>
+    <div class="card"><h3>Campanha atual</h3>
+      <p>${state.marketingDays
+        ? 'Restam '+state.marketingDays+' dias · Demanda +'+
+          Math.round((state.marketingBoost-1)*100)+'%'
+        : 'Nenhuma campanha ativa'
+      }</p>
+    </div><br><div class="grid">`+
+    campaigns.map(([cost,boost,name],i)=>`
+      <div class="card">
+        <h3>${name}</h3>
+        <p>30 dias · Demanda +${Math.round((boost-1)*100)}%</p>
+        <button class="primary" ${state.marketingDays?'disabled':''}
+          onclick="investMarketing(${i})">Investir ${money(cost)}</button>
+      </div>`
+    ).join('')+'</div>';
+}
+
+function investMarketing(i) {
+  if(state.marketingDays)return;
+  const offers=[[1000,1.25],[2500,1.6],[4500,2]];
+
+  if(pay(offers[i][0])) {
+    state.marketingDays=30;
+    state.marketingBoost=offers[i][1];
+    toast('Campanha iniciada por 30 dias');
+    update();
+  }
+}
+
+function contractsPanel() {
+  return title('🤝 Contratos e Parcerias')+
+    '<p>O estoque dos contratos fica reservado. Ofertas aparecem após a pesquisa. '+
+    'Não há multa por expiração.</p><h3>Ofertas disponíveis</h3><div class="grid">'+
+    state.contractOffers.filter(c=>
+      state.products[c.product].unlocked&&
+      !state.contracts.some(a=>a.id===c.id)
+    ).map(c=>`
+      <div class="card">
+        <h3>${c.name}</h3>
+        <p>${c.quantity} unidades de ${meds[c.product][1]} ·
+          Prazo: ${c.days} dias</p>
+        <p>Pagamento: ${money(c.reward)}</p>
+        <button class="primary" onclick="acceptContract(${c.id})">
+          Aceitar contrato
+        </button>
+      </div>`
+    ).join('')+
+    '</div><h3 style="margin-top:20px">Meus contratos</h3><div class="grid">'+
+    state.contracts.map(c=>`
+      <div class="card">
+        <h3>${c.name}</h3>
+        <p>${c.quantity} unidades de ${meds[c.product][1]} · ${money(c.reward)}</p>
+        <p>Status: ${c.status}
+          ${c.status==='Ativo'?' · '+c.remaining+' dias restantes':''}</p>
+        <button ${c.status!=='Ativo'||state.products[c.product].stock<c.quantity?'disabled':''}
+          onclick="deliverContract(${c.id})">Entregar estoque</button>
+      </div>`
+    ).join('')+
+    '</div><h3 style="margin-top:20px">Parcerias e eventos</h3>'+
+    state.events.slice(-6).reverse().map(e=>`
+      <div class="card event"><b>${e.title}</b><p>${e.text}</p></div>`
+    ).join('')+
+    (state.pending?
+      '<button class="primary" onclick="eventDialog()">Analisar evento pendente</button>':
+      '<p>Sem decisões pendentes.</p>');
+}
+
+function acceptContract(id) {
+  const c=state.contractOffers.find(c=>c.id===id);
+  if(!c||!state.products[c.product].unlocked||
+    state.contracts.some(a=>a.id===id))return;
+
+  state.contracts.push({...c,remaining:c.days,status:'Ativo'});
+  update();
+  toast('Contrato aceito');
+}
+
+function deliverContract(id) {
+  const c=state.contracts.find(c=>c.id===id);
+  if(!c||c.status!=='Ativo'||
+    state.products[c.product].stock<c.quantity)return;
+
+  state.products[c.product].stock-=c.quantity;
+  state.cash+=c.reward;
+  state.income+=c.reward;
+  c.status='Concluído';
+  update();
+  toast('Contrato concluído · '+money(c.reward));
+}
+
+// Gestão da equipe e histórico.
+function initManagement(s) {
+  s.journal??=[];
+  s.monthLog??=[];
+  s.monthMade??=0;
+  s.previousMade??=0;
+  s.autoResearch=false;
+
+  s.products.forEach(p=>{
+    p.target??=60;
+    p.batchMade??=0;
+    p.funded??=p.progress>0;
+  });
+
+  return s;
+}
+
+const managementFresh=fresh;
+fresh=function(easy=false) {
+  return initManagement(managementFresh(easy));
+};
+
+const managementMigrate=migrate;
+migrate=function(s) {
+  return initManagement(managementMigrate(s));
+};
+
+initManagement(state);
+
+function logAction(text) {
+  state.monthLog.push({day:state.day,text});
+}
+
+function teamPower(role) {
+  return state.staff.filter(p=>p.role===role)
+    .reduce((n,p)=>n+p.eff/100,0);
+}
+
+function demandPerMonth(i) {
+  const p=state.products[i];
+
+  return meds[i][4]*state.marketBoost*state.marketingBoost*
+    (.7+state.rep/100*.6)*(1+teamPower(5)*.2)*
+    (1+(state.levels[6]-1)*.1)*Math.min(2,meds[i][3]/p.price);
+}
+
+capacity=function() {
+  return Math.max(0,Math.floor(
+    teamPower(1)*3*state.levels[1]*
+    (1+teamPower(2)*.12)*(1+teamPower(6)*.08)
+  ));
+};
+
+const managementStaffInfo=staffInfo;
+staffInfo=function(i) {
+  managementStaffInfo(i);
+
+  const descriptions=[
+    'Gera pontos de pesquisa diariamente.',
+    'Aumenta a capacidade de produção diária.',
+    'Aumenta a capacidade produtiva e reduz o custo por unidade.',
+    'Melhora a qualidade fictícia e valoriza as vendas.',
+    'Reduz despesas através da organização administrativa.',
+    'Aumenta a demanda dos medicamentos.',
+    'Melhora produção, pesquisa e eficiência das despesas.'
+  ];
+
+  const p=document.createElement('p');
+  p.textContent=descriptions[state.staff[i].role];
+  $('modal').appendChild(p);
+
+  const button=document.createElement('button');
+  button.textContent='Demitir · indenização '+
+    money(roles[state.staff[i].role][2]*.5);
+  button.onclick=()=>fireEmployee(i);
+  $('modal').appendChild(button);
+};
+
+function fireEmployee(i) {
+  const employee=state.staff[i];
+  if(!employee)return;
+  if(!confirm('Demitir '+employee.name+'?'))return;
+  if(!pay(roles[employee.role][2]*.5))return;
+
+  state.staff.splice(i,1);
+  logAction('Demissão: '+employee.name+
+    ' ('+roles[employee.role][0]+').');
+
+  $('modal').close();
+  update();
+  toast('Funcionário demitido');
+}
+
+const managementHire=hire;
+hire=function(i) {
+  const count=state.staff.length;
+  managementHire(i);
+  if(state.staff.length>count) {
+    logAction('Contratação: '+state.staff.at(-1).name+
+      ' · '+roles[i][0]+'. Capacidade: '+capacity()+'/dia.');
+  }
+};
+
+const managementTrain=train;
+train=function(i) {
+  const before=state.staff[i].eff;
+  managementTrain(i);
+  if(state.staff[i].eff>before) {
+    logAction('Treinamento: '+state.staff[i].name+
+      ' · eficiência '+state.staff[i].eff+'%.');
+  }
+};
+
+const managementUpgrade=upgrade;
+upgrade=function(i) {
+  const before=state.levels[i];
+  managementUpgrade(i);
+  if(state.levels[i]>before) {
+    logAction('Melhoria: '+buildings[i][0]+
+      ' para nível '+state.levels[i]+'.');
+  }
+};
+
+const managementPrice=price;
+price=function(i) {
+  const before=state.products[i].price;
+  managementPrice(i);
+  if(state.products[i].price!==before) {
+    logAction('Preço de '+meds[i][1]+': '+money(before)+
+      ' → '+money(state.products[i].price)+'.');
+  }
+};
+
+const managementMarketing=investMarketing;
+investMarketing=function(i) {
+  const before=state.marketingDays;
+  managementMarketing(i);
+  if(state.marketingDays>before) {
+    logAction('Marketing iniciado: demanda +'+
+      Math.round((state.marketingBoost-1)*100)+'% por 30 dias.');
+  }
+};
+
+const managementAccept=acceptContract;
+acceptContract=function(id) {
+  const before=state.contracts.length;
+  managementAccept(id);
+  if(state.contracts.length>before) {
+    logAction('Contrato aceito: '+state.contracts.at(-1).name+'.');
+  }
+};
+
+const managementDeliver=deliverContract;
+deliverContract=function(id) {
+  const c=state.contracts.find(c=>c.id===id);
+  const before=c?.status;
+  managementDeliver(id);
+  if(before==='Ativo'&&c.status==='Concluído') {
+    logAction('Contrato entregue: '+c.name+' · '+
+      c.quantity+' unidades · '+money(c.reward)+'.');
+  }
+};
+
+const managementBuy=buyRaw;
+buyRaw=function() {
+  const before=state.raw;
+  managementBuy();
+  if(state.raw>before) {
+    logAction('Compra de 100 unidades de matéria-prima fictícia.');
+  }
+};
+
+const managementClaim=claim;
+claim=function(i) {
+  const before=state.claimed.length;
+  managementClaim(i);
+  if(state.claimed.length>before) {
+    logAction('Objetivo concluído: '+objectives[i][0]+
+      ' · '+money(objectives[i][2])+'.');
+  }
+};
+
+// Pesquisas iniciadas exclusivamente pelo jogador.
+research=function(i) {
+  const p=state.products[i];
+  const required=(meds[i][6]-1)*2;
+
+  if(p.unlocked||
+    state.products.filter(p=>p.unlocked).length<required)return;
+
+  if(!p.funded&&!pay(meds[i][5]*6))return;
+
+  p.funded=true;
+  state.research=i;
+  logAction('Pesquisa iniciada: '+meds[i][1]+'.');
+  update();
+  toast('Pesquisando '+meds[i][1]);
+};
+
+function productionPanel() {
+  return title('🏭 Produção por medicamento')+
+    `<div class="card">
+      <b>Capacidade compartilhada: ${capacity()} unidades/dia</b>
+      <p>Matéria-prima: ${state.raw} · Estoque máximo: ${storage()} unidades.</p>
+      <p>Escolha o tamanho de cada lote.
+        A linha para ao completar a quantidade.</p>
+      <button onclick="buyRaw()">Comprar 100 · $1.200</button>
+    </div><br><div class="grid">`+
+    meds.map((m,i)=>{
+      const p=state.products[i];
+      return `<div class="card">
+        <h3>${m[0]} ${m[1]}</h3>
+        ${p.unlocked?`
+          <p>Demanda: <b>${Math.round(demandPerMonth(i))}/mês</b> ·
+            Estoque: ${p.stock}</p>
+          <p>Lote: ${p.batchMade}/${p.target} unidades ·
+            ${p.enabled?'Em produção':'Pausado ou concluído'}</p>
+          <div class="form">
+            <label>Unidades do próximo lote
+              <input id="target${i}" type="number" min="1"
+                max="10000" step="1" value="${p.target}">
+            </label>
+            <button class="primary" onclick="setProductionTarget(${i})">
+              Iniciar novo lote
+            </button>
+          </div>
+          <button onclick="production(${i})">
+            ${p.enabled?'Pausar':'Retomar lote'}
+          </button>
+        `:'<p>Conclua a pesquisa para liberar.</p>'}
+      </div>`;
+    }).join('')+'</div>';
+}
+
+function setProductionTarget(i) {
+  const n=Number($('target'+i).value);
+  if(!Number.isInteger(n)||n<1||n>10000) {
+    toast('Escolha de 1 a 10.000 unidades inteiras');
+    return;
+  }
+
+  const p=state.products[i];
+  if(!p.unlocked)return;
+  p.target=n;
+  p.batchMade=0;
+  p.enabled=true;
+  logAction('Novo lote: '+n+' unidades de '+meds[i][1]+'.');
+  update();
+  toast('Lote programado');
+}
+
+production=function(i) {
+  const p=state.products[i];
+  if(!p.unlocked)return;
+  if(p.batchMade>=p.target) {
+    toast('Lote concluído. Programe um novo lote.');
+    return;
+  }
+
+  p.enabled=!p.enabled;
+  logAction('Linha '+meds[i][1]+': '+
+    (p.enabled?'retomada.':'pausada.'));
+  update();
+};
+
+function journalPanel() {
+  const current={
+    month:state.month,year:state.year,
+    made:state.monthMade,previous:state.previousMade,
+    actions:state.monthLog,
+    profit:state.income-state.costs,current:true
+  };
+
+  return title('📖 Histórico Mensal')+
+    '<p>Decisões, eventos, pesquisas e produção. '+
+    'O mês atual ainda não inclui todas as despesas de fechamento.</p>'+
+    [current,...state.journal.slice().reverse()].map(m=>{
+      const change=m.made-m.previous;
+      return `<div class="card" style="margin-bottom:14px">
+        <h3>Mês ${m.month} · Ano ${m.year}
+          ${m.current?' · Em andamento':''}</h3>
+        <p>Produção: <b>${m.made} unidades</b> ·
+          Mês anterior: ${m.previous}</p>
+        <p>${change>0?'Aumento de '+change:
+          change<0?'Redução de '+(-change):'Sem alteração'} unidades.</p>
+        <p>${m.current?'Resultado parcial':'Lucro final'}: ${money(m.profit)}</p>
+        ${m.actions.length?
+          m.actions.map(a=>`<p><b>Dia ${a.day}</b> — ${a.text}</p>`).join(''):
+          '<p>Nenhuma ação registrada neste mês.</p>'}
+      </div>`;
+    }).join('');
+}
+
+const managementRender=renderPanel;
+renderPanel=function() {
+  if(view==='Produção') {
+    $('panel').innerHTML=productionPanel();
+    return;
+  }
+
+  if(view==='Histórico') {
+    $('panel').innerHTML=journalPanel();
+    return;
+  }
+
+  managementRender();
+
+  if(view==='Pesquisa') {
+    const p=document.createElement('p');
+    const completed=state.products.filter(p=>p.unlocked).length;
+    p.textContent='Pesquisas concluídas: '+completed+'/'+meds.length+
+      ' · Em andamento: '+
+      (state.research===null?'Nenhuma':meds[state.research][1]);
+    $('panel').prepend(p);
+  }
+};
+
+update=function(force=true) {
+  header();
+  const focused=$('panel').contains(document.activeElement)&&
+    document.activeElement?.tagName==='INPUT';
+
+  if(view!=='Campus'&&(force||(!focused&&view!=='Mercado'))) {
+    renderPanel();
+  }
+};
+
+const managementEvent=randomEvent;
+randomEvent=function() {
+  if(state.pending)return;
+  managementEvent();
+  logAction('Evento: '+state.pending.title+' — '+state.pending.text);
+  eventDialog();
+};
+
+resolveEvent=function(invest) {
+  if(!state.pending)return;
+  const event=state.pending;
+  if(invest&&!pay(event.cost))return;
+
+  if(invest) {
+    state.marketBoost=event.bonus;
+    state.rep=Math.min(100,state.rep+2);
+  }
+
+  const decision=invest?
+    'investir '+money(event.cost):'seguir sem investimento';
+
+  logAction('Decisão em '+event.title+': '+decision+'.');
+  state.events.push({title:'Decisão: '+event.title,text:decision});
+
+  state.pending=null;
+  $('modal').close();
+  save(true);
+  update();
+  toast('Decisão registrada no histórico');
+};
+
+const managementMonthEnd=monthEnd;
+monthEnd=function() {
+  const month=state.month;
+  const year=state.year;
+  const made=state.monthMade;
+  const previous=state.previousMade;
+  const actions=state.monthLog.slice();
+
+  managementMonthEnd();
+
+  state.journal.push({
+    month,year,made,previous,actions,profit:state.lastProfit
+  });
+
+  state.previousMade=made;
+  state.monthMade=0;
+  state.monthLog=[];
+  save(true);
+};
+
+daily=function() {
+  state.day++;
+
+  if(state.marketingDays>0&&--state.marketingDays===0) {
+    state.marketingBoost=1;
+    logAction('Campanha de marketing encerrada.');
+  }
+
+  state.contracts.forEach(c=>{
+    if(c.status==='Ativo'&&--c.remaining<=0) {
+      c.status='Expirado';
+      logAction('Contrato expirado: '+c.name+'.');
+    }
+  });
+
+  const p=state.products[state.research];
+  if(p&&!p.unlocked) {
+    const i=state.research;
+    const points=teamPower(0)*state.levels[0]*
+      (state.easy?5:3)*(1+teamPower(6)*.1);
+
+    p.progress=Math.min(meds[i][5],p.progress+points);
+
+    if(p.progress>=meds[i][5]) {
+      p.unlocked=true;
+      state.rep=Math.min(100,state.rep+3);
+      state.research=null;
+      logAction('Pesquisa concluída: '+meds[i][1]+
+        '. Total aprovado: '+state.products.filter(p=>p.unlocked).length+'.');
+      toast(meds[i][1]+' aprovado!');
+    }
+  }
+
+  let remaining=Math.min(
+    capacity(),state.raw,
+    storage()-state.products.reduce((n,p)=>n+p.stock,0)
+  );
+
+  const active=state.products.map((p,i)=>
+    p.enabled&&p.unlocked&&p.batchMade<p.target?i:-1
+  ).filter(i=>i>=0);
+
+  while(remaining>0&&active.length) {
+    let made=false;
+
+    for(const i of active) {
+      const p=state.products[i];
+      if(remaining<=0)break;
+      if(p.batchMade>=p.target)continue;
+
+      const cost=meds[i][3]*.18/
+        (1+(state.levels[5]-1)*.1+teamPower(2)*.08+teamPower(6)*.04);
+
+      if(state.cash<cost)continue;
+
+      state.cash-=cost;
+      state.costs+=cost;
+      state.raw--;
+      p.stock++;
+      p.batchMade++;
+      state.totalMade++;
+      state.monthMade++;
+      remaining--;
+      made=true;
+
+      if(p.batchMade>=p.target) {
+        p.enabled=false;
+        logAction('Lote concluído: '+p.target+
+          ' unidades de '+meds[i][1]+'.');
+      }
+    }
+
+    if(!made)break;
+  }
+
+  state.products.forEach((p,i)=>{
+    if(!p.unlocked||p.stock<1)return;
+    const demand=demandPerMonth(i)/30;
+    const reserved=state.contracts
+      .filter(c=>c.status==='Ativo'&&c.product===i)
+      .reduce((n,c)=>n+c.quantity,0);
+
+    const sold=Math.min(
+      Math.max(0,p.stock-reserved),
+      Math.floor(demand)+(Math.random()<demand%1?1:0)
+    );
+
+    const revenue=sold*p.price*(1+teamPower(3)*.08);
+    p.stock-=sold;
+    state.cash+=revenue;
+    state.income+=revenue;
+  });
+
+  if(state.day===15&&
+    (state.month+12*(state.year-1))%3===0&&!state.pending) {
+    randomEvent();
+  }
+
+  if(state.day>30)monthEnd();
+  update(false);
+};
+
+const expenseMonthEnd=monthEnd;
+monthEnd=function() {
+  const salaries=state.staff.reduce((n,p)=>n+roles[p.role][2],0);
+  const maintenance=state.levels.reduce((a,b)=>a+b,0)*700;
+  const base=(salaries+maintenance)*(state.easy?.65:.85)/
+    (1+(state.levels[3]-1)*.08);
+  const discount=Math.min(.4,teamPower(4)*.05+teamPower(6)*.04);
+
+  state.cash+=base*discount;
+  state.costs-=base*discount;
+  expenseMonthEnd();
+};
+
+advanceMonth=function() {
+  const paused=state.paused;
+  const month=state.month;
+  const year=state.year;
+  let days=0;
+
+  if(state.pending) {
+    if($('modal').open)$('modal').close();
+    eventDialog();
+    return;
+  }
+
+  while(state.month===month&&state.year===year&&days<31) {
+    daily();
+    days++;
+    if(state.pending)break;
+  }
+
+  state.paused=paused;
+  accumulator=0;
+  save(true);
+  update();
+
+  toast(state.pending?
+    'Avanço interrompido: escolha uma decisão no evento.':
+    'Avanço realizado: '+days+' dias.');
+};
+
+// Desenho e animação do campus.
+const canvas=$('campus');
+const ctx=canvas.getContext('2d');
+let scale=1,ox=0,oy=0;
+
+function employeePos(i,t) {
+  const p=state.staff[i];
+  const b=buildings[[0,1,1,4,3,6,3][p.role]];
+  const phase=t*.3+i*1.7;
+
+  return {
+    x:b[2]+25+(Math.sin(phase)+1)*(b[4]-50)/2,
+    y:b[3]+35+(Math.cos(phase*.8)+1)*(b[5]-55)/2
+  };
+}
+
+function draw(t) {
+  if(view!=='Campus')return;
+  const w=canvas.clientWidth;
+  const h=canvas.clientHeight;
+  const dpr=Math.min(devicePixelRatio||1,2);
+
+  if(canvas.width!==Math.round(w*dpr)||
+    canvas.height!==Math.round(h*dpr)) {
+    canvas.width=Math.round(w*dpr);
+    canvas.height=Math.round(h*dpr);
+  }
+
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle='#0b1b19';
+  ctx.fillRect(0,0,w,h);
+
+  scale=Math.min(w/1000,h/560);
+  ox=(w-1000*scale)/2;
+  oy=(h-560*scale)/2;
+
+  ctx.translate(ox,oy);
+  ctx.scale(scale,scale);
+  ctx.fillStyle='#0e241b';
+  ctx.fillRect(0,0,1000,560);
+
+  ctx.fillStyle='#35475d';
+  ctx.fillRect(75,270,830,42);
+  ctx.fillRect(315,70,45,435);
+  ctx.fillRect(570,70,45,435);
+
+  for(let x=25;x<1000;x+=100) {
+    ctx.fillStyle='#195b37';
+    ctx.beginPath();
+    ctx.arc(x,62,10,0,7);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x,508,10,0,7);
+    ctx.fill();
+  }
+
+  buildings.forEach((b,i)=>{
+    const [name,color,x,y,bw,bh]=b;
+
+    ctx.fillStyle='#050c16';
+    ctx.fillRect(x+6,y+7,bw,bh);
+    ctx.fillStyle=color;
+    ctx.fillRect(x,y,bw,bh);
+
+    ctx.fillStyle='#172236';
+    ctx.fillRect(x+4,y+4,bw-8,23);
+    ctx.fillStyle='#eaf4ff';
+    ctx.font='bold 9px Arial';
+    ctx.fillText(name+' (Nvl '+state.levels[i]+')',x+8,y+19);
+
+    ctx.fillStyle='#8ab5d280';
+    for(let row=0;row<3;row++) {
+      for(let col=0;col<5;col++) {
+        ctx.fillRect(x+13+col*(bw-25)/5,y+38+row*30,(bw-40)/6,17);
+      }
+    }
+
+    ctx.fillStyle='#142136';
+    ctx.fillRect(x+bw/2-15,y+bh-22,30,22);
+    ctx.fillStyle='#31caff';
+    ctx.fillRect(x+bw/2-12,y+bh-19,10,17);
+    ctx.fillRect(x+bw/2+2,y+bh-19,10,17);
+
+    if(i===1) {
+      ctx.fillStyle='#85939a';
+      ctx.fillRect(x+18,y-25,12,25);
+      ctx.fillRect(x+38,y-30,12,30);
+
+      for(let j=0;j<3;j++) {
+        ctx.globalAlpha=.45-j*.1;
+        ctx.beginPath();
+        ctx.arc(x+25+j*15,y-37-(t*12+j*12)%40,9+j*2,0,7);
+        ctx.fill();
+      }
+      ctx.globalAlpha=1;
+    }
+
+    if(i===2) {
+      ctx.fillStyle='#facc15';
+      ctx.fillRect(x+10,y+bh-16,12,14);
+      ctx.fillRect(x+25,y+bh-27,12,25);
+    }
+
+    if(i===5) {
+      const movement=(Math.sin(t)+1)*8;
+      ctx.fillStyle='#25c5f4';
+      ctx.fillRect(x+12+movement,y+bh-40,34,18);
+      ctx.fillStyle='#07111c';
+      ctx.fillRect(x+16+movement,y+bh-23,7,7);
+      ctx.fillRect(x+37+movement,y+bh-23,7,7);
+    }
+  });
+
+  state.staff.forEach((p,i)=>{
+    const pos=employeePos(i,t);
+    const bob=Math.sin(t*8+i)*1.5;
+
+    ctx.fillStyle='#06151a88';
+    ctx.beginPath();
+    ctx.ellipse(pos.x,pos.y+12,6,3,0,0,7);
+    ctx.fill();
+
+    ctx.fillStyle=roles[p.role][1];
+    ctx.fillRect(pos.x-4,pos.y,8,9);
+    ctx.fillStyle=i%2?'#bc875b':'#edc59d';
+    ctx.beginPath();
+    ctx.arc(pos.x,pos.y-3,4,0,7);
+    ctx.fill();
+
+    ctx.fillStyle='#433224';
+    ctx.fillRect(pos.x-4,pos.y-7,8,3);
+    ctx.fillStyle='#d3e4eb';
+    ctx.fillRect(pos.x-3,pos.y+9,2,4+bob);
+    ctx.fillRect(pos.x+1,pos.y+9,2,4-bob);
+  });
+}
+
+canvas.addEventListener('click',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const x=(e.clientX-rect.left-ox)/scale;
+  const y=(e.clientY-rect.top-oy)/scale;
+
+  for(let i=state.staff.length-1;i>=0;i--) {
+    const p=employeePos(i,frame);
+    if(Math.hypot(x-p.x,y-p.y)<15) {
+      staffInfo(i);
+      return;
+    }
+  }
+
+  buildings.forEach((b,i)=>{
+    if(x>=b[2]&&x<=b[2]+b[4]&&
+      y>=b[3]&&y<=b[3]+b[5])buildingInfo(i);
+  });
+});
+
+function loop(now) {
+  const dt=Math.min((now-last)/1000,.2);
+  last=now;
+
+  if(!state.paused&&!$('modal').open) {
+    frame+=dt*state.speed;
+    accumulator+=dt*state.speed;
+
+    if(accumulator>=2) {
+      accumulator-=2;
+      daily();
+    }
+  }
+
+  autosave+=dt;
+  if(autosave>=30) {
+    autosave=0;
+    save(true);
+  }
+
+  draw(frame);
+  requestAnimationFrame(loop);
+}
+
+tabs.push(['📖','Histórico']);
+
+$('nav').innerHTML=tabs.map(([icon,name])=>`
+  <button data-tab="${name}" onclick="openView('${name}')">
+    <span>${icon}</span>${name}
+  </button>
+`).join('');
+
+addEventListener('pagehide',()=>save(true));
+
+document.addEventListener('visibilitychange',()=>{
+  last=performance.now();
+  if(document.hidden)save(true);
+});
+
+openView('Campus');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
